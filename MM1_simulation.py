@@ -1,19 +1,25 @@
 import random
 import numpy as np
+import statistics
 
 next_event = "arrival"
 next_event_time = 0
 next_arrival = 0
 now = 0
-end_time = 1000
-stack_time = {0: 0}
-stack_event = {0: "arrival"}
+end_time = 100000
+stack_time = {}
+stack_event = {}
 top = len(stack_event) - 1
 lambS = 1
-lambA = 0.8
+lambA = 0.3
 previous_event_time = 0
 system_size = 0
-queue_size = 0
+queue_size = 1
+total_arrival = 0
+queue_length = []
+waiting_time = []
+arrival_time = [0]
+service_time = 0
 
 
 def expRVGenerator(para):
@@ -71,24 +77,27 @@ def stack_pop():
 
 
 def arrival():
-    global now, next_event, previous_event_time, next_arrival, queue_size
+    global now, next_event, previous_event_time, next_arrival, queue_size, total_arrival
     now = next_event_time
     next_arrival = now + expRVGenerator(lambA)
     stack_push("arrival", next_arrival)
     if system_size == 0:
         next_event = "service"
+        waiting_time.append(now - arrival_time[0])
+        del arrival_time[0]
     else:
         stack_pop()
 
     if next_event == "arrival":
         queue_size += 1
+        total_arrival += 1
+        arrival_time.append(next_event_time)
 
-    statistics()
     previous_event_time = now
 
 
 def service():
-    global now, next_arrival, previous_event_time, system_size, queue_size
+    global now, next_arrival, previous_event_time, system_size, queue_size, total_arrival
     now = next_event_time
     next_arrival = now + expRVGenerator(lambS)
     stack_push("departure", next_arrival)
@@ -98,35 +107,36 @@ def service():
 
     if next_event == "arrival":
         queue_size += 1
+        total_arrival += 1
+        arrival_time.append(next_event_time)
 
-    statistics()
     previous_event_time = now
 
 
 def departure():
-    global now, next_event, previous_event_time, system_size, queue_size
+    global now, next_event, previous_event_time, system_size, queue_size, total_arrival
     now = next_event_time
     system_size -= 1
 
     if queue_size > 0:
         next_event = "service"
+        waiting_time.append(now - arrival_time[0])
+        del arrival_time[0]
     else:
         stack_pop()
 
     if next_event == "arrival":
         queue_size += 1
+        total_arrival += 1
+        arrival_time.append(next_event_time)
 
-    statistics()
     previous_event_time = now
-
-
-def statistics():
-    pass
 
 
 while now < end_time:
     print(stack_time)
     print(stack_event)
+    queue_length.append(queue_size)
     if event_ID() == 0:
         arrival()
         continue
@@ -136,3 +146,12 @@ while now < end_time:
     elif event_ID() == 2:
         departure()
         continue
+
+
+print("Total arrival: " + str(total_arrival))
+print("Rest queue length: " + str(queue_size))
+print("System time: " + str(end_time))
+print("Arrival rate: " + str(lambA))
+print("Service rate: " + str(lambS))
+print("Average waiting time: " + str(statistics.mean(waiting_time)))
+print("Average queue length: " + str(statistics.mean(queue_length)))
