@@ -6,10 +6,11 @@ next_event_time = 0
 next_arrival = 0
 now = 0
 end_time = 1000
-stack_time = {}
-stack_event = {}
+stack_time = {0: 0}
+stack_event = {0: "arrival"}
 top = len(stack_event) - 1
-lamb = 1
+lambS = 1
+lambA = 0.8
 previous_event_time = 0
 system_size = 0
 queue_size = 0
@@ -36,7 +37,7 @@ def event_ID():
 
 def stack_push(event, time):
     global top
-    j = 0
+    j = len(stack_event)
     top = len(stack_event) - 1
 
     for x in range(len(stack_time)):
@@ -61,7 +62,7 @@ def stack_pop():
     next_event_time = stack_time[0]
     top = len(stack_event) - 1
 
-    for i in range(0, top - 1):
+    for i in range(0, top):
         stack_time[i] = stack_time[i + 1]
         stack_event[i] = stack_event[i + 1]
 
@@ -72,37 +73,48 @@ def stack_pop():
 def arrival():
     global now, next_event, previous_event_time, next_arrival, queue_size
     now = next_event_time
-    next_arrival = now + expRVGenerator(lamb)
+    next_arrival = now + expRVGenerator(lambA)
     stack_push("arrival", next_arrival)
     if system_size == 0:
         next_event = "service"
     else:
         stack_pop()
 
-    queue_size += 1
+    if next_event == "arrival":
+        queue_size += 1
+
     statistics()
     previous_event_time = now
 
 
 def service():
-    global now, next_arrival, previous_event_time
+    global now, next_arrival, previous_event_time, system_size, queue_size
     now = next_event_time
-    next_arrival = now + expRVGenerator(lamb)
+    next_arrival = now + expRVGenerator(lambS)
     stack_push("departure", next_arrival)
     stack_pop()
+    system_size += 1
+    queue_size -= 1
+
+    if next_event == "arrival":
+        queue_size += 1
 
     statistics()
     previous_event_time = now
 
 
 def departure():
-    global now, next_event, previous_event_time
+    global now, next_event, previous_event_time, system_size, queue_size
     now = next_event_time
+    system_size -= 1
 
     if queue_size > 0:
         next_event = "service"
     else:
         stack_pop()
+
+    if next_event == "arrival":
+        queue_size += 1
 
     statistics()
     previous_event_time = now
